@@ -1,7 +1,13 @@
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Any
 from zoneinfo import ZoneInfo
+
+CENTS = Decimal('0.01')
+
+def _to_money_str(value: Decimal) -> str:
+    """Round a DB-exact Decimal to currency precision exactly once."""
+    return str(value.quantize(CENTS, rounding=ROUND_HALF_UP))
 
 async def calculate_monthly_revenue(property_id: str, tenant_id: str, month: int, year: int) -> Dict[str, Any]:
     """
@@ -52,7 +58,7 @@ async def calculate_monthly_revenue(property_id: str, tenant_id: str, month: int
         return {
             "property_id": property_id,
             "tenant_id": tenant_id,
-            "total": str(Decimal(str(row.total))) if row and row.total is not None else "0.00",
+            "total": _to_money_str(Decimal(str(row.total))) if row and row.total is not None else "0.00",
             "currency": "USD",
             "count": row.count if row else 0,
         }
@@ -95,8 +101,8 @@ async def calculate_total_revenue(property_id: str, tenant_id: str) -> Dict[str,
                     return {
                         "property_id": property_id,
                         "tenant_id": tenant_id,
-                        "total": str(total_revenue),
-                        "currency": "USD", 
+                        "total": _to_money_str(total_revenue),
+                        "currency": "USD",
                         "count": row.reservation_count
                     }
                 else:
